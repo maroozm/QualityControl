@@ -20,11 +20,13 @@
 #include "QualityControl/TaskInterface.h"
 #include "TH1D.h"
 #include "TH2F.h"
+#include "TProfile2D.h"
 #include <Framework/TimingInfo.h>
 
 class TH1F;
 class TH2F;
 class TH1D;
+class TProfile2D;
 
 using namespace o2::quality_control::core;
 
@@ -58,31 +60,24 @@ class TrackingTask final : public TaskInterface
   long int mTimestamp;
     std::vector<TObject*> mPublishedObjects;
 
-   // o2::globaltracking::RecoContainer mRecoCont;
- //    gsl::span<const o2::trd::CalibratedTracklet> mTrackletsCalib; // tracklets
+    static constexpr int NLayers = 6;
 
-  TH1F* mHistogram = nullptr;
-  TH1F* mTracksEta;
-  TH1D* mTracksPhi;
-  TH1F* mTracksPt;
-  TH1F* mTracksChi2;
-  TH1F* mNtracks;
-  TH1F* mNtracklets;
-  TH2F* mTracksEtaPhi;
 
-  TH1F* mTracksEtatpc;
-  TH1D* mTracksPhitpc;
-  TH1F* mTracksPttpc;
-  TH1F* mTracksChi2tpc;
-  TH1F* mNtrackstpc;
-  TH1F* mNtrackletstpc;
-  TH2F* mTracksEtaPhitpc;
+  TH1F* mTracksEta = nullptr;
+  TH1D* mTracksPhi = nullptr;
+  TH1F* mTracksPt = nullptr;
+  TH1F* mTracksChi2 = nullptr;
+  TH1F* mTrackletsChi2 = nullptr;
+  TH1F* mNtracks = nullptr;
+  TH1F* mNtracklets = nullptr;
+  TH2F* mTracksEtaPhi = nullptr;
+  TProfile2D* mTrackletsEtaPhi = nullptr;
+  TH1F* mResidualsY = nullptr;
+  TH1F* mResidualsZ = nullptr;
+  TH2F* mResidualsYDet = nullptr;
+  TH1F* mResidualsZDet = nullptr;
 
-  TH2F* mTrackletsEtaPhi;
-  TH2F* mTrackletsEtaPhi2;
-  TH1F* mResidualsX;
-  TH1F* mResidualsY;
-  TH1F* mResidualsZ;
+  std::array<TH2F*, NLayers> mTracksEtaPhiPerLayer;
 };
 
 } // namespace o2::quality_control_modules::trd

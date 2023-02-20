@@ -41,28 +41,18 @@ namespace o2::quality_control_modules::trd
 
 TrackingTask::~TrackingTask()
 {
-  delete mHistogram;
   delete mTracksEta;
   delete mTracksPhi;
   delete mTracksPt;
   delete mTracksChi2;
   delete mNtracks;
   delete mNtracklets;
+  delete mTracksEtaPhiPerLayer[NLAYER];
   delete mTracksEtaPhi;
-
-  delete mTracksEtatpc;
-  delete mTracksPhitpc;
-  delete mTracksPttpc;
-  delete mTracksChi2tpc;
-  delete mNtrackstpc;
-  delete mNtrackletstpc;
-  delete mTracksEtaPhitpc;
-
   delete mTrackletsEtaPhi;
-  delete mTrackletsEtaPhi2;
-  delete mResidualsX;
   delete mResidualsY;
   delete mResidualsZ;
+  delete mResidualsYDet;
 }
 
 void TrackingTask::retrieveCCDBSettings()
@@ -100,34 +90,8 @@ void TrackingTask::monitorData(o2::framework::ProcessingContext& ctx)
 {
   ILOG(Info, Support) << "monitorData" << ENDM;
 
- // mRecoCont.collectData(ctx, *mDataRequest.get());
-
   auto trackArr = ctx.inputs().get<gsl::span<o2::trd::TrackQC>>("tracks");
- // auto tracktpcArr = ctx.inputs().get<gsl::span<o2::trd::TrackTRD>>("trackstpc");
-//  auto tracksArrtpc = ctx.inputs().get<gsl::span<o2::trd::TrackTRD>>("trackstpc");
- // auto trackletArr = ctx.inputs().get<gsl::span<o2::globaltracking::RecoContainer>>("tracklets");
-//  auto trackletArr = ctx.inputs().get<gsl::span<o2::trd::CalibratedTracklet>>("tracklets");
   auto tracktrigArr = ctx.inputs().get<gsl::span<o2::trd::TrackTriggerRecord>>("trigrectrk");
-//  auto tracktrigtpcArr = ctx.inputs().get<gsl::span<o2::trd::TrackTriggerRecord>>("trigrectrktpc");
-
-/*
-for (int itrttpc = 0; itrttpc < tracktrigtpcArr.size(); itrttpc++)
-  {
-    int first = tracktrigtpcArr[itrttpc].getFirstTrack();
-    int end = first + tracktrigtpcArr[itrttpc].getNumberOfTracks();
-    mNtrackstpc->Fill(tracktrigtpcArr[itrttpc].getNumberOfTracks());
-    for (int itrk = first; itrk < end; itrk++)
-    {
-      mTracksEtatpc->Fill(tracktpcArr[itrk].getEta());
-      mTracksPhitpc->Fill(tracktpcArr[itrk].getPhi());
-      mTracksPttpc->Fill(tracktpcArr[itrk].getPt());
-      mTracksChi2tpc->Fill(tracktpcArr[itrk].getChi2());
-      mTracksEtaPhitpc->Fill(tracktpcArr[itrk].getEta(), tracktpcArr[itrk].getPhi());
-      mNtrackletstpc->Fill(tracktpcArr[itrk].getNtracklets());
-
-    }
-  }
-*/
   
   for (int itrt = 0; itrt < tracktrigArr.size(); itrt++)
   {
@@ -136,81 +100,28 @@ for (int itrttpc = 0; itrttpc < tracktrigtpcArr.size(); itrttpc++)
     mNtracks->Fill(tracktrigArr[itrt].getNumberOfTracks());
     for (int itrk = first; itrk < end; itrk++)
     {
-      mTracksEta->Fill(trackArr[itrk].getEta());
-      mTracksPhi->Fill(trackArr[itrk].getPhi());
-      mTracksPt->Fill(trackArr[itrk].getPt());
-      mTracksChi2->Fill(trackArr[itrk].getChi2());
-      mTracksEtaPhi->Fill(trackArr[itrk].getEta(), trackArr[itrk].getPhi());
-      mNtracklets->Fill(trackArr[itrk].getNtracklets());
-
+      mTracksPt->Fill(trackArr[itrk].pt);
+      mTracksChi2->Fill(trackArr[itrk].chi2);
+      mNtracklets->Fill(trackArr[itrk].nTracklets);
+     // if(!(trackArr[itrk].hasPadrowCrossing)) continue;
+      for(int iLayer = 0; iLayer < NLAYER; iLayer++){
+       // if(trackArr[itrk].trackletIndex[iLayer] != -1)
+       if(trackArr[itrk].findable[iLayer] && trackArr[itrk].trackX[iLayer] > 10) 
+        {
+          mTracksEta->Fill(trackArr[itrk].trackEta[iLayer]);
+          mTracksPhi->Fill(trackArr[itrk].trackPhi[iLayer]);
+          mTrackletsChi2->Fill(trackArr[itrk].trackletChi2[iLayer]);
+          mTracksEtaPhiPerLayer[iLayer]->Fill(trackArr[itrk].trackEta[iLayer], trackArr[itrk].trackPhi[iLayer]);
+          mTracksEtaPhi->Fill(trackArr[itrk].trackEta[iLayer], trackArr[itrk].trackPhi[iLayer]);
+          mResidualsY->Fill(trackArr[itrk].trackY[iLayer] - trackArr[itrk].trackletY[iLayer]);
+          mResidualsYDet->Fill(trackArr[itrk].trackletDet[iLayer], trackArr[itrk].trackY[iLayer] - trackArr[itrk].trackletY[iLayer]);
+          mResidualsZ->Fill(trackArr[itrk].trackZ[iLayer] - trackArr[itrk].trackletZ[iLayer]);
+          mTrackletsEtaPhi->Fill(trackArr[itrk].trackEta[iLayer], trackArr[itrk].trackPhi[iLayer], trackArr[itrk].nTracklets);
+        }
+      }
     }
   }
 
- // mTracksChi2->Fill(tracktrigArr.size());
-
- // auto tracklet64 = trackletArr.getTRDTracklets();
- //mTrackletsCalib = mRecoCont.getTRDCalibratedTracklets();
- //int mTrackletsc = trackletArr.getCalibratedTracklets();
- /*  for (int itrt = 0; itrt < tracktrigArr.size(); itrt++)
-  {
-    int first = tracktrigArr[itrt].getFirstTrack();
-    int end = first + tracktrigArr[itrt].getNumberOfTracks();
-    mNtracks->Fill(tracktrigArr[itrt].getNumberOfTracks());
-    for (int itrk = first; itrk < end; itrk++)
-    {
-     // mNtracks->Fill(trackArr.size());
-     /*  mTracksEta->Fill(trackArr[itrk].getEta());
-      mTracksPhi->Fill(trackArr[itrk].getPhi());
-      mTracksPt->Fill(trackArr[itrk].getPt());
-      mTracksChi2->Fill(trackArr[itrk].getChi2()); */
-     /* mTracksEtaPhi->Fill(trackArr[itrk].getEta(), trackArr[itrk].getPhi());
-      mNtracklets->Fill(trackArr[itrk].getNtracklets());
-
-      for (int ilyr = 0; ilyr < NLAYER; ilyr++)
-      {
-        int trklet = trackArr[itrk].getTrackletIndex(ilyr);
-       // if (trackArr[itrk].getTrackletIndex(ilyr) > -1)
-       if (ilyr == 0)
-        {
-          mResidualsX->Fill(trackArr[itrk].getX()-trackletArr[trklet].getX());
-          mResidualsY->Fill(trackArr[itrk].getY()-trackletArr[trklet].getY());
-          mResidualsZ->Fill(trackArr[itrk].getZ()-trackletArr[trklet].getZ());
-          mTracksEta->Fill(trackArr[itrk].getEta());
-          mTracksPhi->Fill(trackArr[itrk].getPhi());
-          mTracksPt->Fill(trackArr[itrk].getPt());
-          mTracksChi2->Fill(trackArr[itrk].getChi2());
-          mTrackletsEtaPhi->Fill(trackArr[itrk].getEta(), trackArr[itrk].getPhi());
-         // mTrackletsEtaPhi->Fill(trackArr[itrk].getEta(), trackArr[itrk].getPhi());
-        }
-        if (ilyr == 1)
-        {
-          mTrackletsEtaPhi2->Fill(trackArr[itrk].getEta(), trackArr[itrk].getPhi());
-        }
-        
-      }
-      
-    } 
-  }*/
-  
-  /* mNtracks->Fill(tracks.size());
-  for (auto& track : tracks) {
-    mTracksEta->Fill(track.getEta());
-    mTracksPhi->Fill(track.getPhi());
-    mTracksPt->Fill(track.getPt());
-    mTracksChi2->Fill(track.getChi2());
-    mTracksEtaPhi->Fill(track.getEta(), track.getPhi());
-    mNtracklets->Fill(track.getNtracklets());
-  } */
- /*  for (auto&& input : ctx.inputs()) {
-    if (input.spec->binding == "tracks") {
-      auto tracks = ctx.inputs().get<gsl::span<o2::trd::TrackTRD>>("tracks");
-      for (auto& track : tracks) {
-        mTracksEta->Fill(track.getEta());
-        mTracksPhi->Fill(track.getPhi());
-        mTracksPt->Fill(track.getPt());
-      }
-    }
-  } */
 }
 
 void TrackingTask::endOfCycle()
@@ -230,55 +141,65 @@ void TrackingTask::reset()
   mTracksPhi->Reset();
   mTracksPt->Reset();
   mTracksChi2->Reset();
+  mTrackletsChi2->Reset();
   mNtracks->Reset();
   mNtracklets->Reset();
+  for (auto h : mTracksEtaPhiPerLayer) {
+    h->Reset();
+  }
   mTracksEtaPhi->Reset();
+  mTrackletsEtaPhi->Reset();
+  mResidualsY->Reset();
+  mResidualsZ->Reset();
+  mResidualsYDet->Reset();
 }
 
 void TrackingTask::buildHistograms()
 {
   mNtracks = new TH1F("tracks", "Tracks; # of tracks; counts", 100, 0.0f, 100.0f);
   addObject(mNtracks);
-  mNtrackstpc = new TH1F("trackstpc", "TracksTPC; # of tracks; counts", 100, 0.0f, 100.0f);
-  addObject(mNtrackstpc);
-  
+  mNtracks->SetStats(0);
   mNtracklets = new TH1F("tracklets", "Tracklets; # of tracklets; counts", 100, 0.0f, 100.0f);
   addObject(mNtracklets);
-  mNtrackletstpc = new TH1F("trackletstpc", "TrackletsTPC; # of tracklets; counts", 100, 0.0f, 100.0f);
-  addObject(mNtrackletstpc);
-
+  mNtracklets->SetStats(0);
   mTracksEta = new TH1F("tracksEta", "EtaDistribution; #eta; counts", 40, -2.0f, 2.0f);
   addObject(mTracksEta);
-  mTracksEtatpc = new TH1F("tracksEtatpc", "EtaDistributionTPC; #eta; counts", 40, -2.0f, 2.0f);
-  addObject(mTracksEtatpc);
+  mTracksEta->SetStats(0);
   mTracksPhi = new TH1D("tracksPhi", "PhiDistribution; #phi; counts", 60, 0, TMath::TwoPi());
   addObject(mTracksPhi);
-  mTracksPhitpc = new TH1D("tracksPhitpc", "PhiDistributionTPC; #phi; counts", 60, 0, TMath::TwoPi());
-  addObject(mTracksPhitpc);
+  mTracksPhi->SetStats(0);
+   mTracksEtaPhi = new TH2F("tracksEtaPhi", "EtaPhiDistribution; #eta; #phi; counts", 20, -0.81f, 0.81f, 60, 0, TMath::TwoPi());
+  addObject(mTracksEtaPhi);
+  mTracksEtaPhi->SetStats(0);
+  for (int ilyr = 0; ilyr < NLAYER; ilyr++)
+  {
+  mTracksEtaPhiPerLayer[ilyr] = new TH2F(Form("tracksEtaPhilayer%i", ilyr), Form("EtaPhiDistribution%i; #eta; #phi", ilyr), 20, -1.0f, 1.0f, 60, 0, TMath::TwoPi());
+  addObject(mTracksEtaPhiPerLayer[ilyr]);
+  mTracksEtaPhiPerLayer[ilyr]->SetStats(0);
+  }
   mTracksPt = new TH1F("tracksPt", "pTDistribution; p_{T} (GeV/c); counts", 100, 0.0f, 10.0f);
   addObject(mTracksPt);
-  mTracksPttpc = new TH1F("tracksPttpc", "pTDistributionTPC; p_{T} (GeV/c); counts", 100, 0.0f, 10.0f);
-  addObject(mTracksPttpc);
+  mTracksPt->SetStats(0);
   mTracksChi2 = new TH1F("tracksChi2", "Chi2Distribution; #chi^{2}; counts", 100, 0.0f, 100.0f);
   addObject(mTracksChi2);
-  mTracksChi2tpc = new TH1F("tracksChi2tpc", "Chi2DistributionTPC; #chi^{2}; counts", 100, 0.0f, 100.0f);
-  addObject(mTracksChi2tpc);
-  mTracksEtaPhi = new TH2F("tracksEtaPhi", "EtaPhiDistribution; #eta; #phi", 40, -2.0f, 2.0f, 60, 0, TMath::TwoPi());
-  addObject(mTracksEtaPhi);
-  mTracksEtaPhitpc = new TH2F("tracksEtaPhitpc", "EtaPhiDistributionTPC; #eta; #phi", 40, -2.0f, 2.0f, 60, 0, TMath::TwoPi());
-  addObject(mTracksEtaPhitpc);
-
-
-  mTrackletsEtaPhi = new TH2F("trackletEtaPhi", "EtaPhiDistribution; #eta; #phi", 40, -2.0f, 2.0f, 60, 0, TMath::TwoPi());
+  mTracksChi2->SetStats(0);
+  mTrackletsChi2 = new TH1F("trackletsChi2", "Chi2Distribution; #chi^{2}; counts", 100, 0.0f, 100.0f);
+  addObject(mTrackletsChi2);
+  mTrackletsChi2->SetStats(0);
+  mTrackletsEtaPhi = new TProfile2D("trackletEtaPhi", "EtaPhiDistribution; #eta; #phi; Average # of tracklets per track", 20, -0.81f, 0.81f, 60, 0, TMath::TwoPi(), 0, 6);
   addObject(mTrackletsEtaPhi);
-  mTrackletsEtaPhi2 = new TH2F("trackletEtaPhi2", "EtaPhiDistribution; #eta; #phi", 40, -2.0f, 2.0f, 60, 0, TMath::TwoPi());
-  addObject(mTrackletsEtaPhi2);
-  mResidualsX = new TH1F("residualsX", "ResidualsX; #Delta x (cm); counts", 200, -10.0f, 10.f);
-  addObject(mResidualsX);
+  mTrackletsEtaPhi->SetStats(0);
   mResidualsY = new TH1F("residualsY", "ResidualsY; #Delta y (cm); counts", 200, -10.0f, 10.f);
   addObject(mResidualsY);
+  mResidualsY->SetStats(0);
   mResidualsZ = new TH1F("residualsZ", "ResidualsZ; #Delta z (cm); counts", 200, -10.0f, 10.f);
   addObject(mResidualsZ);
+  mResidualsZ->SetStats(0);
+  mResidualsYDet = new TH2F("residualsYDet", "ResidualsY vs chambers; chamber number; #Delta y (cm); counts", 540, 0, 540, 200, -10.0f, 10.f);
+  addObject(mResidualsYDet);
+  mResidualsYDet->SetStats(0);
+  
+  
 }
 
 void TrackingTask::addObject(TObject* aObject)
@@ -290,6 +211,7 @@ void TrackingTask::addObject(TObject* aObject)
     mPublishedObjects.push_back(aObject);
   }
 }
+
 
 void TrackingTask::publishHistograms()
 {
